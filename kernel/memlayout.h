@@ -47,9 +47,16 @@
 // in both user and kernel space.
 #define TRAMPOLINE (MAXVA - PGSIZE)
 
+#ifdef LAB_PGTBL
+#define SUPERTRAMPOLINE (MAXVA - SUPERPGSIZE)
+#endif
 // map kernel stacks beneath the trampoline,
 // each surrounded by invalid guard pages.
 #define KSTACK(p) (TRAMPOLINE - (p)*2*PGSIZE - 3*PGSIZE)
+
+#ifdef LAB_PGTBL
+#define SUPERKSTACK(p) (TRAMPOLINE - (p)*2*SUPERPGSIZE - 3*SUPERPGSIZE)
+#endif
 
 // User memory layout.
 // Address zero first:
@@ -62,6 +69,11 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+
+#ifdef LAB_PGTBL
+#define SUPERTRAPFRAME (TRAMPOLINE - SUPERPGSIZE)
+#endif
+
 #ifdef LAB_PGTBL
 #define USYSCALL (TRAPFRAME - PGSIZE)
 

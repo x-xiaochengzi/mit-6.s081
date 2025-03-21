@@ -365,6 +365,8 @@ typedef uint64 *pagetable_t; // 512 PTEs
 #ifdef LAB_PGTBL
 #define SUPERPGSIZE (2 * (1 << 20)) // bytes per page
 #define SUPERPGROUNDUP(sz)  (((sz)+SUPERPGSIZE-1) & ~(SUPERPGSIZE-1))
+#define SUPERPA2PTE(pa) ((((uint64)pa) >> 21) << 10)
+#define SUPERPTE2PA(pte) (((pte) >> 10) << 21)
 #endif
 
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
@@ -375,7 +377,7 @@ typedef uint64 *pagetable_t; // 512 PTEs
 #define PTE_W (1L << 2)
 #define PTE_X (1L << 3)
 #define PTE_U (1L << 4) // user can access
-
+#define PTE_SUPER (1L << 5) 
 
 
 #if defined(LAB_MMAP) || defined(LAB_PGTBL)

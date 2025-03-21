@@ -23,20 +23,70 @@ struct {
   struct run *freelist;
 } kmem;
 
-void
-kinit()
-{
-  initlock(&kmem.lock, "kmem");
-  freerange(end, (void*)PHYSTOP);
+struct {
+  struct spinlock lock;
+  struct run *freelist;
+} super_kmem;
+
+
+void kinit() {
+    initlock(&kmem.lock, "kmem");
+    initlock(&super_kmem.lock, "kmem");
+    freerange(end, (void *)PHYSTOP);
 }
+// Allocate one 2MB page of physical memory.
+// Returns a pointer that the kernel can use.
+// Returns 0 if the memory cannot be allocated.
+void *
+superalloc(void)
+{
+  struct run *r;
+
+  acquire(&super_kmem.lock);
+  r = super_kmem.freelist;
+  if(r)
+  super_kmem.freelist = r->next;
+  release(&super_kmem.lock);
+
+  if(r)
+    memset((char*)r, 5, SUPERPGSIZE); // fill with junk
+  return (void*)r;
+}
+// Free the page of physical memory pointed at by pa,
+// which normally should have been returned by a
+// call to superalloc().  (The exception is when
+// initializing the allocator; see kinit above.)
+void
+superfree(void *pa)
+{
+  struct run *r;
+
+  if(((uint64)pa % SUPERPGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
+    panic("super_free");
+
+  // Fill with junk to catch dangling refs.
+  memset(pa, 1, SUPERPGSIZE);
+
+  r = (struct run*)pa;
+
+  acquire(&super_kmem.lock);
+  r->next = super_kmem.freelist;
+  super_kmem.freelist = r;
+  release(&super_kmem.lock);
+}
+
 
 void
 freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end - 16 * SUPERPGSIZE; p += PGSIZE)
     kfree(p);
+
+  p = (char *)SUPERPGROUNDUP((uint64)p);
+  for (; p + SUPERPGSIZE <= (char *)pa_end; p += SUPERPGSIZE)
+    superfree(p);
 }
 
 // Free the page of physical memory pointed at by pa,
@@ -62,6 +112,8 @@ kfree(void *pa)
   release(&kmem.lock);
 }
 
+
+
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
@@ -80,3 +132,4 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
