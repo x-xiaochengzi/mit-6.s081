@@ -145,7 +145,10 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
+  p->ticks = 0;
+  p->passed = 0;
+  p->trapframe_copy = (struct trapframe*)((char*)p->trapframe + 2048);
+  p->handling_signal = 0;
   return p;
 }
 
